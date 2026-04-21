@@ -2,7 +2,10 @@ import sqlite3
 
 
 def create_connection():
-    conn = sqlite3.connect("metrics.db", check_same_thread=False, timeout=10)
+    conn = sqlite3.connect("metrics.db",
+                           check_same_thread=False,
+                           timeout=30
+                           )
     return conn
 
 
