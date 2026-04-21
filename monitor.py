@@ -18,7 +18,7 @@ while True:
 
     try:
         res = requests.post(
-        "https://opsguardian-production.up.railway.app/metrics",
+        "https://opsguardian.up.railway.app/metrics",
         json=metrics,
         timeout=5
     )
