@@ -20,7 +20,7 @@ while True:
         res = requests.post(
         "https://opsguardian.up.railway.app/metrics",
         json=metrics,
-        timeout=30
+        timeout=60
     )
         print("✅ Sent to backend:", res.status_code)
     except Exception as e:
