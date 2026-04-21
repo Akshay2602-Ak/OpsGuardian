@@ -17,7 +17,11 @@ while True:
     print("Disk:", metrics["disk"])
 
     try:
-        res = requests.post("https://opsguardian-production.up.railway.app/metrics", json=metrics)
+        res = requests.post(
+        "https://opsguardian-production.up.railway.app/metrics",
+        json=metrics,
+        timeout=5
+    )
         print("✅ Sent to backend:", res.status_code)
     except Exception as e:
         print("❌ Error:", e)
