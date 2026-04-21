@@ -1,7 +1,8 @@
 import sqlite3
 
+
 def create_connection():
-    conn = sqlite3.connect("metrics.db", check_same_thread=False )
+    conn = sqlite3.connect("metrics.db", check_same_thread=False, timeout=10)
     return conn
 
 
