@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>OpsGuardian Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            margin: 0;
+            background: linear-gradient(135deg, #020617, #0f172a);
+            color: white;
+            font-family: 'Segoe UI', sans-serif;
+            text-align: center;
+        }
+
+        h1 {
+            margin-top: 20px;
+        }
+
+        .top {
+            margin: 10px;
+        }
+
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            background: #1e293b;
+            color: white;
+        }
+
+        button:hover {
+            background: #3b82f6;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .card {
+            background: rgba(30, 41, 59, 0.8);
+            padding: 20px;
+            border-radius: 15px;
+        }
+
+        canvas {
+            background: white;
+            border-radius: 10px;
+        }
+
+        .green { color: #22c55e; }
+        .red { color: #ef4444; }
+
+        #alertsList {
+            max-height: 180px;
+            overflow-y: auto;
+            text-align: left;
+        }
+
+        .alert {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 8px;
+            background: #7f1d1d;
+        }
+    </style>
+</head>
+
+<body>
+
+<h1>🚀 OpsGuardian Dashboard</h1>
+
+<div class="top">
+    <div id="healthStatus">Checking system...</div>
+    <div id="count"></div>
+    <button onclick="refreshAll()">🔄 Refresh</button>
+</div>
+
+<div class="container">
+
+    <div class="card">
+        <h2>CPU</h2>
+        <canvas id="cpuChart"></canvas>
+        <div id="cpuStatus"></div>
+    </div>
+
+    <div class="card">
+        <h2>Memory</h2>
+        <canvas id="memoryChart"></canvas>
+        <div id="memoryStatus"></div>
+    </div>
+
+    <div class="card">
+        <h2>Disk</h2>
+        <canvas id="diskChart"></canvas>
+        <div id="diskStatus"></div>
+    </div>
+
+    <div class="card">
+        <h2>🚨 Alerts</h2>
+        <ul id="alertsList"></ul>
+    </div>
+
+</div>
+
+<script>
+const BASE_URL = "https://opsguardian-production.up.railway.app";
+
+let cpuChart = createChart("cpuChart", "CPU");
+let memoryChart = createChart("memoryChart", "Memory");
+let diskChart = createChart("diskChart", "Disk");
+
+function createChart(id, label) {
+    return new Chart(document.getElementById(id), {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: label,
+                data: [],
+                fill: true,
+                tension: 0.4
+            }]
+        }
+    });
+}
+
+function updateChart(chart, data, labels) {
+    chart.data.labels = labels;
+    chart.data.datasets[0].data = data;
+    chart.update();
+}
+
+function updateStatus(id, value, limit) {
+    let el = document.getElementById(id);
+    if (value > limit) {
+        el.innerHTML = "⚠️ High " + value + "%";
+        el.className = "red";
+    } else {
+        el.innerHTML = "✅ Normal " + value + "%";
+        el.className = "green";
+    }
+}
+
+function updateHealth(cpu, memory, disk) {
+    let status = document.getElementById("healthStatus");
+
+    if (cpu > 50 || memory > 70 || disk > 80) {
+        status.innerHTML = "🔴 System Under Stress";
+        status.style.color = "red";
+    } else {
+        status.innerHTML = "🟢 System Healthy";
+        status.style.color = "#22c55e";
+    }
+}
+
+function refreshAll() {
+    fetchData();
+    fetchAlerts();
+}
+
+async function fetchData() {
+    try {
+        let res = await fetch("https://opsguardian-production.up.railway.app/metrics");
+        let data = await res.json();
+
+        if (data.length === 0) return;
+
+        let cpu = data.map(d => d.cpu).reverse();
+        let memory = data.map(d => d.memory).reverse();
+        let disk = data.map(d => d.disk).reverse();
+
+        let labels = data.map(d => {
+            if (!d.time) return "N/A";
+            return new Date(d.time).toLocaleTimeString();
+        }).reverse();
+
+        updateChart(cpuChart, cpu, labels);
+        updateChart(memoryChart, memory, labels);
+        updateChart(diskChart, disk, labels);
+
+        updateStatus("cpuStatus", cpu.at(-1), 50);
+        updateStatus("memoryStatus", memory.at(-1), 70);
+        updateStatus("diskStatus", disk.at(-1), 80);
+
+        updateHealth(cpu.at(-1), memory.at(-1), disk.at(-1));
+
+        document.getElementById("count").innerText = "Total Records: " + data.length;
+
+    } catch (error) {
+        console.log("❌ API Error:", error);
+    }
+}
+
+async function fetchAlerts() {
+    try {
+        let res = await fetch("https://opsguardian-production.up.railway.app/alerts");
+        let data = await res.json();
+
+        let list = document.getElementById("alertsList");
+        list.innerHTML = "";
+
+        data.forEach(a => {
+            let li = document.createElement("li");
+            li.className = "alert";
+            li.innerHTML = `<b>${a.message}</b><br><small>${a.time}</small>`;
+            list.appendChild(li);
+        });
+
+    } catch (error) {
+        console.log("❌ Alert API Error:", error);
+    }
+}
+
+setInterval(fetchData, 5000);
+setInterval(fetchAlerts, 5000);
+
+fetchData();
+fetchAlerts();
+</script>
+
+</body>
+</html>
