@@ -33,7 +33,7 @@ def reset():
     conn.commit()
     conn.close()
 
-    return {"status": "database cleared"}
+    return {"status": "database cleared "}
 
 
 # 🔴 POST METRICS
