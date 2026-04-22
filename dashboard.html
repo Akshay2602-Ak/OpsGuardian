@@ -14,13 +14,9 @@
             text-align: center;
         }
 
-        h1 {
-            margin-top: 20px;
-        }
+        h1 { margin-top: 20px; }
 
-        .top {
-            margin: 10px;
-        }
+        .top { margin: 10px; }
 
         button {
             padding: 10px 15px;
@@ -32,9 +28,7 @@
             color: white;
         }
 
-        button:hover {
-            background: #3b82f6;
-        }
+        button:hover { background: #3b82f6; }
 
         .container {
             display: grid;
@@ -127,14 +121,21 @@ function createChart(id, label) {
                 fill: true,
                 tension: 0.4
             }]
+        },
+        options: {
+            animation: false   // 🔥 IMPORTANT (no lag + no ghost data)
         }
     });
 }
 
-function updateChart(chart, data, labels) {
-    chart.data.labels = labels;
-    chart.data.datasets[0].data = data;
-    chart.update();
+function destroyCharts() {
+    cpuChart.destroy();
+    memoryChart.destroy();
+    diskChart.destroy();
+
+    cpuChart = createChart("cpuChart", "CPU");
+    memoryChart = createChart("memoryChart", "Memory");
+    diskChart = createChart("diskChart", "Disk");
 }
 
 function updateStatus(id, value, limit) {
@@ -167,38 +168,37 @@ function refreshAll() {
 
 async function fetchData() {
     try {
-        let res = await fetch(BASE_URL + "/metrics");
+        let res = await fetch(BASE_URL + "/metrics?ts=" + Date.now(), {
+            cache: "no-store"   // 🔥 disable cache
+        });
+
         let data = await res.json();
 
-        // 🔥 CLEAR OLD GRAPH DATA (FIX)
-        cpuChart.data.labels = [];
-        cpuChart.data.datasets[0].data = [];
+        // 🔥 DESTROY OLD CHART COMPLETELY (FINAL FIX)
+        destroyCharts();
 
-        memoryChart.data.labels = [];
-        memoryChart.data.datasets[0].data = [];
-
-        diskChart.data.labels = [];
-        diskChart.data.datasets[0].data = [];
-
-        if (data.length === 0) {
-            cpuChart.update();
-            memoryChart.update();
-            diskChart.update();
-            return;
-        }
+        if (!data || data.length === 0) return;
 
         let cpu = data.map(d => d.cpu).reverse();
         let memory = data.map(d => d.memory).reverse();
         let disk = data.map(d => d.disk).reverse();
 
-        let labels = data.map(d => {
-            if (!d.time) return "N/A";
-            return new Date(d.time).toLocaleTimeString();
-        }).reverse();
+        let labels = data.map(d =>
+            new Date(d.time).toLocaleTimeString()
+        ).reverse();
 
-        updateChart(cpuChart, cpu, labels);
-        updateChart(memoryChart, memory, labels);
-        updateChart(diskChart, disk, labels);
+        cpuChart.data.labels = labels;
+        cpuChart.data.datasets[0].data = cpu;
+
+        memoryChart.data.labels = labels;
+        memoryChart.data.datasets[0].data = memory;
+
+        diskChart.data.labels = labels;
+        diskChart.data.datasets[0].data = disk;
+
+        cpuChart.update();
+        memoryChart.update();
+        diskChart.update();
 
         updateStatus("cpuStatus", cpu.at(-1), 50);
         updateStatus("memoryStatus", memory.at(-1), 70);
@@ -215,7 +215,10 @@ async function fetchData() {
 
 async function fetchAlerts() {
     try {
-        let res = await fetch(BASE_URL + "/alerts");
+        let res = await fetch(BASE_URL + "/alerts?ts=" + Date.now(), {
+            cache: "no-store"
+        });
+
         let data = await res.json();
 
         let list = document.getElementById("alertsList");

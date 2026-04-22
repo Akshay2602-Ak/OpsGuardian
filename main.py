@@ -21,6 +21,21 @@ def home():
     return {"message": "OpsGuardian Backend is Running 🚀"}
 
 
+# 🔴 RESET DATABASE (🔥 VERY IMPORTANT)
+@app.get("/reset")
+def reset():
+    conn = create_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("DELETE FROM metrics")
+    cursor.execute("DELETE FROM alerts")
+
+    conn.commit()
+    conn.close()
+
+    return {"status": "database cleared"}
+
+
 # 🔴 POST METRICS
 @app.post("/metrics")
 def receive_metrics(data: dict):
@@ -33,18 +48,7 @@ def receive_metrics(data: dict):
         conn = create_connection()
         cursor = conn.cursor()
 
-        # 🔥 DELETE OLD DATA (keep only fresh)
-        cursor.execute("""
-            DELETE FROM metrics
-            WHERE timestamp < NOW() - INTERVAL '30 seconds'
-        """)
-
-        cursor.execute("""
-            DELETE FROM alerts
-            WHERE timestamp < NOW() - INTERVAL '1 minute'
-        """)
-
-        # ✅ INSERT METRICS
+        # ✅ INSERT ONLY (NO DELETE LOGIC HERE)
         cursor.execute(
             "INSERT INTO metrics (cpu, memory, disk) VALUES (%s, %s, %s)",
             (cpu, memory, disk)
@@ -64,8 +68,6 @@ def receive_metrics(data: dict):
                 "INSERT INTO alerts (message) VALUES (%s)",
                 (msg,)
             )
-
-            # 🔥 SEND EMAIL
             send_email_alert(msg)
 
         conn.commit()
@@ -80,7 +82,7 @@ def receive_metrics(data: dict):
             conn.close()
 
 
-# 🟢 GET METRICS
+# 🟢 GET ONLY LATEST DATA (🔥 FIXED)
 @app.get("/metrics")
 def get_metrics():
     conn = create_connection()
@@ -89,7 +91,6 @@ def get_metrics():
     cursor.execute("""
         SELECT id, cpu, memory, disk, timestamp
         FROM metrics
-        WHERE timestamp > NOW() - INTERVAL '30 seconds'
         ORDER BY id DESC
         LIMIT 10
     """)
@@ -118,7 +119,6 @@ def get_alerts():
     cursor.execute("""
         SELECT id, message, timestamp
         FROM alerts
-        WHERE timestamp > NOW() - INTERVAL '1 minute'
         ORDER BY id DESC
         LIMIT 5
     """)
