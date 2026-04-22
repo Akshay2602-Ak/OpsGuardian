@@ -67,6 +67,7 @@ def get_metrics():
     cursor.execute("""
         SELECT id, cpu, memory, disk, timestamp
         FROM metrics
+        WHERE timestamp > NOW() - INTERVAL '2 minutes'
         ORDER BY id DESC
         LIMIT 10
     """)
