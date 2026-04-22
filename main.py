@@ -21,7 +21,7 @@ def home():
     return {"message": "OpsGuardian Backend is Running 🚀"}
 
 
-# 🔴 RESET DATABASE (🔥 VERY IMPORTANT)
+# 🔴 RESET DATABASE
 @app.get("/reset")
 def reset():
     conn = create_connection()
@@ -41,29 +41,33 @@ def reset():
 def receive_metrics(data: dict):
     conn = None
     try:
-        cpu = data.get("cpu", 0)
-        memory = data.get("memory", 0)
-        disk = data.get("disk", 0)
+        cpu = float(data.get("cpu", 0))
+        memory = float(data.get("memory", 0))
+        disk = float(data.get("disk", 0))
 
         conn = create_connection()
         cursor = conn.cursor()
 
-        # ✅ INSERT ONLY (NO DELETE LOGIC HERE)
+        # ✅ INSERT DATA
         cursor.execute(
             "INSERT INTO metrics (cpu, memory, disk) VALUES (%s, %s, %s)",
             (cpu, memory, disk)
         )
 
-        # 🔥 ALERT LOGIC
-        msg = None
-        if cpu > 50:
-            msg = f"High CPU: {cpu}%"
-        elif memory > 70:
-            msg = f"High Memory: {memory}%"
-        elif disk > 80:
-            msg = f"Disk Full: {disk}%"
+        # 🔥 ALERT LOGIC (use separate ifs)
+        alerts = []
 
-        if msg:
+        if cpu > 50:
+            alerts.append(f"High CPU: {cpu}%")
+
+        if memory > 70:
+            alerts.append(f"High Memory: {memory}%")
+
+        if disk > 80:
+            alerts.append(f"Disk Full: {disk}%")
+
+        # ✅ STORE + SEND ALERTS
+        for msg in alerts:
             cursor.execute(
                 "INSERT INTO alerts (message) VALUES (%s)",
                 (msg,)
@@ -82,7 +86,7 @@ def receive_metrics(data: dict):
             conn.close()
 
 
-# 🟢 GET ONLY LATEST DATA (🔥 FIXED)
+# 🟢 GET METRICS (LATEST ONLY)
 @app.get("/metrics")
 def get_metrics():
     conn = create_connection()
@@ -101,9 +105,9 @@ def get_metrics():
     return [
         {
             "id": r[0],
-            "cpu": r[1],
-            "memory": r[2],
-            "disk": r[3],
+            "cpu": float(r[1]),
+            "memory": float(r[2]),
+            "disk": float(r[3]),
             "time": str(r[4])
         }
         for r in rows
