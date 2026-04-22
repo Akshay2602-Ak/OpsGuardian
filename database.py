@@ -1,11 +1,15 @@
 import sqlite3
 
-
 def create_connection():
-    conn = sqlite3.connect("metrics.db",
-                           check_same_thread=False,
-                           timeout=30
-                           )
+    conn = sqlite3.connect(
+        "metrics.db",
+        check_same_thread=False,
+        timeout=30
+    )
+
+    # 🔥 THIS IS THE IMPORTANT LINE (YOU MISSED THIS)
+    conn.execute("PRAGMA journal_mode=WAL;")
+
     return conn
 
 

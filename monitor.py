@@ -19,7 +19,7 @@ def send_metrics(metrics):
             res = requests.post(
                 URL,
                 json=metrics,
-                timeout=15   # 🔥 reduced timeout (faster fail)
+                timeout=5   # 🔥 reduced timeout (faster fail)
             )
 
             print(f"✅ Sent: {res.status_code}")
@@ -56,4 +56,4 @@ while True:
 
     print("--------------------------------------------------")
 
-    time.sleep(20)   # 🔥 IMPORTANT (reduce load on Railway)
+    time.sleep(5)   # 🔥 IMPORTANT (reduce load on Railway)

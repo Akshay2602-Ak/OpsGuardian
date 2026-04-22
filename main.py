@@ -13,7 +13,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ✅ Create tables
+# ✅ Initialize DB
 create_table()
 create_alerts_table()
 
@@ -23,7 +23,7 @@ def home():
     return {"message": "OpsGuardian Backend is Running 🚀"}
 
 
-# 🔴 POST METRICS (🔥 FIXED + SAFE)
+# 🔴 POST METRICS (🔥 OPTIMIZED)
 @app.post("/metrics")
 def receive_metrics(data: dict):
     try:
@@ -36,27 +36,28 @@ def receive_metrics(data: dict):
         conn = create_connection()
         cursor = conn.cursor()
 
-        # ✅ Store metrics
+        # ✅ Store metrics (single write)
         cursor.execute(
             "INSERT INTO metrics (cpu, memory, disk) VALUES (?, ?, ?)",
             (cpu, memory, disk)
         )
 
-        # 🔥 ALERT LOGIC (❌ Email removed for stability)
+        # 🔥 ONLY ONE ALERT (reduces DB load)
+        msg = None
+
         if cpu > 50:
             msg = f"High CPU Usage: {cpu}%"
-            print("⚠️", msg)
-            cursor.execute("INSERT INTO alerts (message) VALUES (?)", (msg,))
-
-        if memory > 70:
+        elif memory > 70:
             msg = f"High Memory Usage: {memory}%"
-            print("⚠️", msg)
-            cursor.execute("INSERT INTO alerts (message) VALUES (?)", (msg,))
-
-        if disk > 80:
+        elif disk > 80:
             msg = f"Disk Almost Full: {disk}%"
+
+        if msg:
             print("⚠️", msg)
-            cursor.execute("INSERT INTO alerts (message) VALUES (?)", (msg,))
+            cursor.execute(
+                "INSERT INTO alerts (message) VALUES (?)",
+                (msg,)
+            )
 
         conn.commit()
         conn.close()
