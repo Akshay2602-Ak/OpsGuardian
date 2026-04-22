@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from database import create_connection, create_table
 
 app = FastAPI()
 
@@ -11,9 +12,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 🔥 In-memory storage (NO DB)
-metrics_data = []
-alerts_data = []
+create_table()
 
 
 @app.get("/")
@@ -28,18 +27,14 @@ def receive_metrics(data: dict):
         memory = data.get("memory")
         disk = data.get("disk")
 
-        entry = {
-            "cpu": cpu,
-            "memory": memory,
-            "disk": disk
-        }
+        conn = create_connection()
+        cursor = conn.cursor()
 
-        metrics_data.insert(0, entry)
+        cursor.execute(
+            "INSERT INTO metrics (cpu, memory, disk) VALUES (%s, %s, %s)",
+            (cpu, memory, disk)
+        )
 
-        if len(metrics_data) > 10:
-            metrics_data.pop()
-
-        # 🔥 Alert logic (only one)
         msg = None
         if cpu > 50:
             msg = f"High CPU: {cpu}%"
@@ -49,21 +44,68 @@ def receive_metrics(data: dict):
             msg = f"Disk Full: {disk}%"
 
         if msg:
-            alerts_data.insert(0, {"message": msg})
-            if len(alerts_data) > 5:
-                alerts_data.pop()
+            cursor.execute(
+                "INSERT INTO alerts (message) VALUES (%s)",
+                (msg,)
+            )
+
+        conn.commit()
+        conn.close()
 
         return {"status": "ok"}
 
     except Exception as e:
+        print("❌ ERROR:", e)
         return {"error": str(e)}
 
 
 @app.get("/metrics")
 def get_metrics():
-    return metrics_data
+    conn = create_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT id, cpu, memory, disk, timestamp
+        FROM metrics
+        ORDER BY id DESC
+        LIMIT 10
+    """)
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    return [
+        {
+            "id": r[0],
+            "cpu": r[1],
+            "memory": r[2],
+            "disk": r[3],
+            "time": str(r[4])
+        }
+        for r in rows
+    ]
 
 
 @app.get("/alerts")
 def get_alerts():
-    return alerts_data
+    conn = create_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT id, message, timestamp
+        FROM alerts
+        ORDER BY id DESC
+        LIMIT 5
+    """)
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    return [
+        {
+            "id": r[0],
+            "message": r[1],
+            "time": str(r[2])
+        }
+        for r in rows
+    ]
