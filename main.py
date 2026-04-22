@@ -138,6 +138,3 @@ def get_alerts():
         }
         for r in rows
     ]
-@app.get("/test")
-def test():
-    return {"msg": "NEW CODE WORKING"}
