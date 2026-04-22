@@ -30,11 +30,10 @@ def receive_metrics(data: dict):
         conn = create_connection()
         cursor = conn.cursor()
 
-        cursor.execute(
-            "INSERT INTO metrics (cpu, memory, disk) VALUES (%s, %s, %s)",
-            (cpu, memory, disk)
-        )
-
+        cursor.execute("""
+                       DELETE FROM metrics
+                       WHERE timestamp < NOW() - INTERVAL '5 minutes'
+                       """)
         msg = None
         if cpu > 50:
             msg = f"High CPU: {cpu}%"
