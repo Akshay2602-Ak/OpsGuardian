@@ -167,7 +167,7 @@ function refreshAll() {
 
 async function fetchData() {
     try {
-        let res = await fetch("https://opsguardian.up.railway.app/metrics");
+        let res = await fetch(BASE_URL + "/metrics");
         let data = await res.json();
 
         if (data.length === 0) return;
@@ -200,7 +200,7 @@ async function fetchData() {
 
 async function fetchAlerts() {
     try {
-        let res = await fetch("https://opsguardian.up.railway.app/alerts");
+        let res = await fetch(BASE_URL + "/alerts");
         let data = await res.json();
 
         let list = document.getElementById("alertsList");
