@@ -170,7 +170,22 @@ async function fetchData() {
         let res = await fetch(BASE_URL + "/metrics");
         let data = await res.json();
 
-        if (data.length === 0) return;
+        // 🔥 CLEAR OLD GRAPH DATA (FIX)
+        cpuChart.data.labels = [];
+        cpuChart.data.datasets[0].data = [];
+
+        memoryChart.data.labels = [];
+        memoryChart.data.datasets[0].data = [];
+
+        diskChart.data.labels = [];
+        diskChart.data.datasets[0].data = [];
+
+        if (data.length === 0) {
+            cpuChart.update();
+            memoryChart.update();
+            diskChart.update();
+            return;
+        }
 
         let cpu = data.map(d => d.cpu).reverse();
         let memory = data.map(d => d.memory).reverse();

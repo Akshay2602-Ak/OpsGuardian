@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database import create_connection, create_table
+from email_alert import send_email_alert
 
 app = FastAPI()
 
@@ -32,19 +33,18 @@ def receive_metrics(data: dict):
         conn = create_connection()
         cursor = conn.cursor()
 
-        # ✅ CLEAN OLD DATA (metrics)
+        # 🔥 DELETE OLD DATA (keep only fresh)
         cursor.execute("""
             DELETE FROM metrics
             WHERE timestamp < NOW() - INTERVAL '30 seconds'
         """)
 
-        # ✅ CLEAN OLD ALERTS (important)
         cursor.execute("""
             DELETE FROM alerts
             WHERE timestamp < NOW() - INTERVAL '1 minute'
         """)
 
-        # ✅ INSERT NEW METRICS
+        # ✅ INSERT METRICS
         cursor.execute(
             "INSERT INTO metrics (cpu, memory, disk) VALUES (%s, %s, %s)",
             (cpu, memory, disk)
@@ -65,6 +65,9 @@ def receive_metrics(data: dict):
                 (msg,)
             )
 
+            # 🔥 SEND EMAIL
+            send_email_alert(msg)
+
         conn.commit()
         return {"status": "ok"}
 
@@ -77,7 +80,7 @@ def receive_metrics(data: dict):
             conn.close()
 
 
-# 🟢 GET METRICS (ONLY FRESH DATA)
+# 🟢 GET METRICS
 @app.get("/metrics")
 def get_metrics():
     conn = create_connection()
@@ -106,7 +109,7 @@ def get_metrics():
     ]
 
 
-# 🟡 GET ALERTS (ONLY RECENT)
+# 🟡 GET ALERTS
 @app.get("/alerts")
 def get_alerts():
     conn = create_connection()
