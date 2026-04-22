@@ -12,14 +12,14 @@ def get_system_metrics():
     }
 
 def send_metrics(metrics):
-    retries = 3
+    retries = 5
 
     for attempt in range(retries):
         try:
             res = requests.post(
                 URL,
                 json=metrics,
-                timeout=5   # 🔥 reduced timeout (faster fail)
+                timeout=60  # 🔥 reduced timeout (faster fail)
             )
 
             print(f"✅ Sent: {res.status_code}")
@@ -39,7 +39,7 @@ def send_metrics(metrics):
         except Exception as e:
             print(f"❌ Error (Attempt {attempt+1}):", e)
 
-        time.sleep(3)  # 🔥 small delay before retry
+        time.sleep(10)  # 🔥 small delay before retry
 
     print("❌ Failed after retries")
 
@@ -56,4 +56,4 @@ while True:
 
     print("--------------------------------------------------")
 
-    time.sleep(5)   # 🔥 IMPORTANT (reduce load on Railway)
+    time.sleep(10)   # 🔥 IMPORTANT (reduce load on Railway)
