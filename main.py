@@ -20,20 +20,37 @@ def home():
     return {"message": "OpsGuardian Backend is Running 🚀"}
 
 
+# 🔴 POST METRICS
 @app.post("/metrics")
 def receive_metrics(data: dict):
+    conn = None
     try:
-        cpu = data.get("cpu")
-        memory = data.get("memory")
-        disk = data.get("disk")
+        cpu = data.get("cpu", 0)
+        memory = data.get("memory", 0)
+        disk = data.get("disk", 0)
 
         conn = create_connection()
         cursor = conn.cursor()
 
+        # ✅ CLEAN OLD DATA (metrics)
         cursor.execute("""
-                       DELETE FROM metrics
-                       WHERE timestamp < NOW() - INTERVAL '5 minutes'
-                       """)
+            DELETE FROM metrics
+            WHERE timestamp < NOW() - INTERVAL '30 seconds'
+        """)
+
+        # ✅ CLEAN OLD ALERTS (important)
+        cursor.execute("""
+            DELETE FROM alerts
+            WHERE timestamp < NOW() - INTERVAL '1 minute'
+        """)
+
+        # ✅ INSERT NEW METRICS
+        cursor.execute(
+            "INSERT INTO metrics (cpu, memory, disk) VALUES (%s, %s, %s)",
+            (cpu, memory, disk)
+        )
+
+        # 🔥 ALERT LOGIC
         msg = None
         if cpu > 50:
             msg = f"High CPU: {cpu}%"
@@ -49,15 +66,18 @@ def receive_metrics(data: dict):
             )
 
         conn.commit()
-        conn.close()
-
         return {"status": "ok"}
 
     except Exception as e:
         print("❌ ERROR:", e)
         return {"error": str(e)}
 
+    finally:
+        if conn:
+            conn.close()
 
+
+# 🟢 GET METRICS (ONLY FRESH DATA)
 @app.get("/metrics")
 def get_metrics():
     conn = create_connection()
@@ -66,7 +86,7 @@ def get_metrics():
     cursor.execute("""
         SELECT id, cpu, memory, disk, timestamp
         FROM metrics
-        WHERE timestamp > NOW() - INTERVAL '2 minutes'
+        WHERE timestamp > NOW() - INTERVAL '30 seconds'
         ORDER BY id DESC
         LIMIT 10
     """)
@@ -86,6 +106,7 @@ def get_metrics():
     ]
 
 
+# 🟡 GET ALERTS (ONLY RECENT)
 @app.get("/alerts")
 def get_alerts():
     conn = create_connection()
@@ -94,6 +115,7 @@ def get_alerts():
     cursor.execute("""
         SELECT id, message, timestamp
         FROM alerts
+        WHERE timestamp > NOW() - INTERVAL '1 minute'
         ORDER BY id DESC
         LIMIT 5
     """)
