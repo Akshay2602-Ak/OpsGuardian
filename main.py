@@ -120,3 +120,7 @@ def get_alerts():
         })
 
     return alerts
+@app.get("/test-email")
+def test_email(background_tasks: BackgroundTasks):
+    background_tasks.add_task(send_email_alert, "Test Email from OpsGuardian")
+    return {"status": "test email triggered"}
