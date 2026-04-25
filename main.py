@@ -66,7 +66,7 @@ def get_alerts():
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT message, timestamp
+        SELECT cpu, memory, disk, timestamp
         FROM metrics
         WHERE cpu > 50 OR memory > 70 OR disk > 80
         ORDER BY id DESC
@@ -76,10 +76,26 @@ def get_alerts():
     rows = cursor.fetchall()
     conn.close()
 
-    return [
-        {
-            "message": f"High usage detected",
-            "time": str(r[1])
-        }
-        for r in rows
-    ]
+    alerts = []
+
+    for r in rows:
+        cpu = r[0]
+        memory = r[1]
+        disk = r[2]
+        time = r[3]
+
+        if cpu > 50:
+            message = f"High CPU Usage: {cpu}%"
+        elif memory > 70:
+            message = f"High Memory Usage: {memory}%"
+        elif disk > 80:
+            message = f"Disk Full: {disk}%"
+        else:
+            message = "System Alert"
+
+        alerts.append({
+            "message": message,
+            "time": str(time)
+        })
+
+    return alerts
