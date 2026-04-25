@@ -60,3 +60,26 @@ def get_metrics():
         }
         for r in rows
     ]
+@app.get("/alerts")
+def get_alerts():
+    conn = create_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT message, timestamp
+        FROM metrics
+        WHERE cpu > 50 OR memory > 70 OR disk > 80
+        ORDER BY id DESC
+        LIMIT 5
+    """)
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    return [
+        {
+            "message": f"High usage detected",
+            "time": str(r[1])
+        }
+        for r in rows
+    ]
