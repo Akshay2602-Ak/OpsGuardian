@@ -1,106 +1,203 @@
 <!DOCTYPE html>
 <html>
-
 <head>
     <title>OpsGuardian Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
+        * {
+            box-sizing: border-box;
+        }
+
         body {
             margin: 0;
-            background: linear-gradient(135deg, #020617, #0f172a);
+            min-height: 100vh;
+            background:
+                radial-gradient(circle at top left, #1d4ed8, transparent 30%),
+                linear-gradient(135deg, #020617, #0f172a);
             color: white;
             font-family: 'Segoe UI', sans-serif;
+        }
+
+        .header {
+            padding: 25px 20px;
             text-align: center;
         }
 
-        h1 { margin-top: 20px; }
-
-        .top { margin: 10px; }
-
-        button {
-            padding: 10px 15px;
-            margin: 5px;
-            border-radius: 8px;
-            border: none;
-            cursor: pointer;
-            background: #1e293b;
-            color: white;
+        .header h1 {
+            margin: 0;
+            font-size: 32px;
         }
 
-        button:hover { background: #3b82f6; }
+        .header p {
+            color: #94a3b8;
+            margin-top: 8px;
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .badge {
+            background: rgba(30, 41, 59, 0.85);
+            padding: 12px 18px;
+            border-radius: 999px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+        }
+
+        button {
+            padding: 12px 18px;
+            border-radius: 999px;
+            border: none;
+            cursor: pointer;
+            background: linear-gradient(135deg, #2563eb, #7c3aed);
+            color: white;
+            font-weight: 600;
+        }
 
         .container {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 22px;
             padding: 20px;
         }
 
         .card {
-            background: rgba(30, 41, 59, 0.8);
-            padding: 20px;
-            border-radius: 15px;
+            background: rgba(15, 23, 42, 0.78);
+            backdrop-filter: blur(14px);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 22px;
+            padding: 22px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.35);
+            transition: 0.25s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-6px);
+        }
+
+        .metric-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .metric-value {
+            font-size: 28px;
+            font-weight: bold;
+            margin: 10px 0;
         }
 
         canvas {
             background: white;
-            border-radius: 10px;
+            border-radius: 16px;
+            padding: 8px;
         }
 
-        .green { color: #22c55e; }
-        .red { color: #ef4444; }
+        .green {
+            color: #22c55e;
+        }
+
+        .red {
+            color: #ef4444;
+        }
+
+        .yellow {
+            color: #facc15;
+        }
 
         #alertsList {
-            max-height: 180px;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            max-height: 230px;
             overflow-y: auto;
-            text-align: left;
         }
 
         .alert {
-            padding: 10px;
-            margin: 5px 0;
-            border-radius: 8px;
-            background: #7f1d1d;
+            background: linear-gradient(135deg, #7f1d1d, #991b1b);
+            padding: 14px;
+            border-radius: 14px;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .footer {
+            text-align: center;
+            color: #64748b;
+            padding: 20px;
+            font-size: 13px;
+        }
+
+        @media (max-width: 600px) {
+            .header h1 {
+                font-size: 24px;
+            }
+
+            .metric-value {
+                font-size: 22px;
+            }
         }
     </style>
 </head>
 
 <body>
 
-<h1>🚀 OpsGuardian Dashboard</h1>
+<div class="header">
+    <h1>🚀 OpsGuardian</h1>
+    <p>Real-time system monitoring dashboard</p>
+</div>
 
-<div class="top">
-    <div id="healthStatus">Checking system...</div>
-    <div id="count"></div>
+<div class="top-bar">
+    <div id="healthStatus" class="badge">Checking system...</div>
+    <div id="count" class="badge">Records: 0</div>
     <button onclick="refreshAll()">🔄 Refresh</button>
 </div>
 
 <div class="container">
 
     <div class="card">
-        <h2>CPU</h2>
+        <div class="metric-title">
+            <h2>CPU</h2>
+            <span id="cpuStatus"></span>
+        </div>
+        <div id="cpuValue" class="metric-value">--%</div>
         <canvas id="cpuChart"></canvas>
-        <div id="cpuStatus"></div>
     </div>
 
     <div class="card">
-        <h2>Memory</h2>
+        <div class="metric-title">
+            <h2>Memory</h2>
+            <span id="memoryStatus"></span>
+        </div>
+        <div id="memoryValue" class="metric-value">--%</div>
         <canvas id="memoryChart"></canvas>
-        <div id="memoryStatus"></div>
     </div>
 
     <div class="card">
-        <h2>Disk</h2>
+        <div class="metric-title">
+            <h2>Disk</h2>
+            <span id="diskStatus"></span>
+        </div>
+        <div id="diskValue" class="metric-value">--%</div>
         <canvas id="diskChart"></canvas>
-        <div id="diskStatus"></div>
     </div>
 
     <div class="card">
-        <h2>🚨 Alerts</h2>
-        <ul id="alertsList"></ul>
+        <h2>🚨 Recent Alerts</h2>
+        <ul id="alertsList">
+            <li class="alert">No alerts yet</li>
+        </ul>
     </div>
 
+</div>
+
+<div class="footer">
+    OpsGuardian Cloud Monitoring System
 </div>
 
 <script>
@@ -112,149 +209,148 @@ let diskChart = createChart("diskChart", "Disk");
 
 function createChart(id, label) {
     return new Chart(document.getElementById(id), {
-        type: 'line',
+        type: "line",
         data: {
             labels: [],
             datasets: [{
                 label: label,
                 data: [],
                 fill: true,
-                tension: 0.4
+                tension: 0.4,
+                borderWidth: 2
             }]
         },
         options: {
-            animation: false
+            animation: false,
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: true
+                }
+            },
+            scales: {
+                y: {
+                    min: 0,
+                    max: 100
+                }
+            }
         }
     });
 }
 
-function destroyCharts() {
-    cpuChart.destroy();
-    memoryChart.destroy();
-    diskChart.destroy();
-
-    cpuChart = createChart("cpuChart", "CPU");
-    memoryChart = createChart("memoryChart", "Memory");
-    diskChart = createChart("diskChart", "Disk");
+function updateChart(chart, values, labels) {
+    chart.data.labels = labels;
+    chart.data.datasets[0].data = values;
+    chart.update();
 }
 
 function updateStatus(id, value, limit) {
-    let el = document.getElementById(id);
+    const el = document.getElementById(id);
+
     if (value > limit) {
-        el.innerHTML = "⚠️ High " + value + "%";
+        el.innerHTML = "High";
         el.className = "red";
     } else {
-        el.innerHTML = "✅ Normal " + value + "%";
+        el.innerHTML = "Normal";
         el.className = "green";
     }
 }
 
 function updateHealth(cpu, memory, disk) {
-    let status = document.getElementById("healthStatus");
+    const health = document.getElementById("healthStatus");
 
     if (cpu > 50 || memory > 70 || disk > 80) {
-        status.innerHTML = "🔴 System Under Stress";
-        status.style.color = "red";
+        health.innerHTML = "🔴 System Under Stress";
+        health.className = "badge red";
     } else {
-        status.innerHTML = "🟢 System Healthy";
-        status.style.color = "#22c55e";
+        health.innerHTML = "🟢 System Healthy";
+        health.className = "badge green";
+    }
+}
+
+function formatIST(time) {
+    const date = new Date(time + " UTC");
+
+    return date.toLocaleTimeString("en-IN", {
+        timeZone: "Asia/Kolkata",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true
+    });
+}
+
+async function fetchData() {
+    try {
+        const res = await fetch(BASE_URL + "/metrics?ts=" + Date.now(), {
+            cache: "no-store"
+        });
+
+        const data = await res.json();
+
+        if (!Array.isArray(data) || data.length === 0) {
+            return;
+        }
+
+        const cpu = data.map(d => d.cpu).reverse();
+        const memory = data.map(d => d.memory).reverse();
+        const disk = data.map(d => d.disk).reverse();
+        const labels = data.map(d => formatIST(d.time)).reverse();
+
+        updateChart(cpuChart, cpu, labels);
+        updateChart(memoryChart, memory, labels);
+        updateChart(diskChart, disk, labels);
+
+        const latestCPU = cpu.at(-1);
+        const latestMemory = memory.at(-1);
+        const latestDisk = disk.at(-1);
+
+        document.getElementById("cpuValue").innerText = latestCPU + "%";
+        document.getElementById("memoryValue").innerText = latestMemory + "%";
+        document.getElementById("diskValue").innerText = latestDisk + "%";
+
+        updateStatus("cpuStatus", latestCPU, 50);
+        updateStatus("memoryStatus", latestMemory, 70);
+        updateStatus("diskStatus", latestDisk, 80);
+        updateHealth(latestCPU, latestMemory, latestDisk);
+
+        document.getElementById("count").innerText = "Records: " + data.length;
+
+    } catch (error) {
+        console.log("API Error:", error);
+    }
+}
+
+async function fetchAlerts() {
+    try {
+        const res = await fetch(BASE_URL + "/alerts?ts=" + Date.now(), {
+            cache: "no-store"
+        });
+
+        const data = await res.json();
+        const list = document.getElementById("alertsList");
+        list.innerHTML = "";
+
+        if (!Array.isArray(data) || data.length === 0) {
+            list.innerHTML = "<li class='alert'>No recent alerts</li>";
+            return;
+        }
+
+        data.forEach(alert => {
+            const li = document.createElement("li");
+            li.className = "alert";
+            li.innerHTML = `<b>${alert.message}</b><br><small>${formatIST(alert.time)}</small>`;
+            list.appendChild(li);
+        });
+
+    } catch (error) {
+        console.log("Alert Error:", error);
     }
 }
 
 function refreshAll() {
     fetchData();
     fetchAlerts();
-}
-
-async function fetchData() {
-    try {
-        let res = await fetch(BASE_URL + "/metrics?ts=" + Date.now(), {
-            cache: "no-store"
-        });
-
-        let data = await res.json();
-
-        destroyCharts();
-
-        if (!data || data.length === 0) return;
-
-        let cpu = data.map(d => d.cpu).reverse();
-        let memory = data.map(d => d.memory).reverse();
-        let disk = data.map(d => d.disk).reverse();
-
-        // ✅ FIXED TIME (IST)
-        let labels = data.map(d => {
-            if (!d.time) return "N/A";
-
-            let date = new Date(d.time + " UTC");
-
-            return date.toLocaleTimeString("en-IN", {
-                timeZone: "Asia/Kolkata",
-                hour: "2-digit",
-                minute: "2-digit",
-                second: "2-digit",
-                hour12: true
-            });
-        }).reverse();
-
-        cpuChart.data.labels = labels;
-        cpuChart.data.datasets[0].data = cpu;
-
-        memoryChart.data.labels = labels;
-        memoryChart.data.datasets[0].data = memory;
-
-        diskChart.data.labels = labels;
-        diskChart.data.datasets[0].data = disk;
-
-        cpuChart.update();
-        memoryChart.update();
-        diskChart.update();
-
-        updateStatus("cpuStatus", cpu.at(-1), 50);
-        updateStatus("memoryStatus", memory.at(-1), 70);
-        updateStatus("diskStatus", disk.at(-1), 80);
-
-        updateHealth(cpu.at(-1), memory.at(-1), disk.at(-1));
-
-        document.getElementById("count").innerText = "Total Records: " + data.length;
-
-    } catch (error) {
-        console.log("❌ API Error:", error);
-    }
-}
-
-async function fetchAlerts() {
-    try {
-        let res = await fetch(BASE_URL + "/alerts?ts=" + Date.now(), {
-            cache: "no-store"
-        });
-
-        let data = await res.json();
-
-        let list = document.getElementById("alertsList");
-        list.innerHTML = "";
-
-        if (!Array.isArray(data)) {
-            list.innerHTML = "<li class='alert'>No alerts available</li>";
-            console.log("Alert API returned:", data);
-            return;
-        }
-
-        if (data.length === 0) {
-            list.innerHTML = "<li class='alert'>No recent alerts</li>";
-            return;
-        }
-
-        data.forEach(a => {
-            let li = document.createElement("li");
-            li.className = "alert";
-            li.innerHTML = `<b>${a.message}</b><br><small>${a.time || ""}</small>`;
-            list.appendChild(li);
-        });
-
-    } catch (error) {
-        console.log("❌ Alert API Error:", error);
-    }
 }
 
 setInterval(fetchData, 5000);
