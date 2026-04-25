@@ -6,3 +6,5 @@ dist/
 metrics.db
 .env
 docker-compose.yml
+Dockerfile
+email_alert.py
