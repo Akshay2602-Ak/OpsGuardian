@@ -14,10 +14,16 @@ def get_metrics():
 while True:
     data = get_metrics()
 
+    print("CPU:", data["cpu"])
+    print("Memory:", data["memory"])
+    print("Disk:", data["disk"])
+
     try:
         res = requests.post(URL, json=data, timeout=15)
         print("Sent:", res.status_code)
     except Exception as e:
         print("Network issue:", e)
+
+    print("----------------------")
 
     time.sleep(10)
