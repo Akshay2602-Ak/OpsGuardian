@@ -2,7 +2,7 @@ import smtplib
 import os
 
 EMAIL = os.getenv("bro998510@gmail.com")
-PASSWORD = os.getenv("btamcktuxafxjrdd")
+PASSWORD = os.getenv("zvfwzuusxqqdqmnu")
 
 def send_email_alert(message):
     try:
