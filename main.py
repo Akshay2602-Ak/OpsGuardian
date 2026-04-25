@@ -1,6 +1,8 @@
+import threading
+import time
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from database import create_connection, create_table
+from database import init_pool, get_connection, release_connection, create_table
 from email_alert import send_email_alert
 
 app = FastAPI()
@@ -13,8 +15,50 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ---------------------------------------------------------------------------
+# Startup: initialise the connection pool, then create tables.
+# ---------------------------------------------------------------------------
+init_pool(minconn=2, maxconn=10)
 create_table()
 
+# ---------------------------------------------------------------------------
+# Simple in-process cache (TTL = 2 seconds).
+# Each entry: {"data": <result>, "ts": <epoch float>}
+# ---------------------------------------------------------------------------
+_CACHE_TTL = 2.0  # seconds
+_cache: dict = {}
+_cache_lock = threading.Lock()
+
+
+def _cache_get(key: str):
+    with _cache_lock:
+        entry = _cache.get(key)
+        if entry and (time.monotonic() - entry["ts"]) < _CACHE_TTL:
+            return entry["data"]
+    return None
+
+
+def _cache_set(key: str, data) -> None:
+    with _cache_lock:
+        _cache[key] = {"data": data, "ts": time.monotonic()}
+
+
+def _cache_invalidate(key: str) -> None:
+    with _cache_lock:
+        _cache.pop(key, None)
+
+
+# ---------------------------------------------------------------------------
+# Helper: fire-and-forget email in a background thread so it never blocks.
+# ---------------------------------------------------------------------------
+def _send_email_async(message: str) -> None:
+    t = threading.Thread(target=send_email_alert, args=(message,), daemon=True)
+    t.start()
+
+
+# ---------------------------------------------------------------------------
+# Routes
+# ---------------------------------------------------------------------------
 
 @app.get("/")
 def home():
@@ -24,16 +68,23 @@ def home():
 # 🔴 RESET DATABASE
 @app.get("/reset")
 def reset():
-    conn = create_connection()
-    cursor = conn.cursor()
+    conn = None
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
 
-    cursor.execute("DELETE FROM metrics")
-    cursor.execute("DELETE FROM alerts")
+        cursor.execute("DELETE FROM metrics")
+        cursor.execute("DELETE FROM alerts")
 
-    conn.commit()
-    conn.close()
+        conn.commit()
 
-    return {"status": "database cleared "}
+        # Invalidate caches so stale data isn't served after a reset.
+        _cache_invalidate("metrics")
+        _cache_invalidate("alerts")
+
+        return {"status": "database cleared "}
+    finally:
+        release_connection(conn)
 
 
 # 🔴 POST METRICS
@@ -45,7 +96,7 @@ def receive_metrics(data: dict):
         memory = float(data.get("memory", 0))
         disk = float(data.get("disk", 0))
 
-        conn = create_connection()
+        conn = get_connection()
         cursor = conn.cursor()
 
         # ✅ INSERT DATA
@@ -72,9 +123,15 @@ def receive_metrics(data: dict):
                 "INSERT INTO alerts (message) VALUES (%s)",
                 (msg,)
             )
-            send_email_alert(msg)
+            # 🚀 Non-blocking: email is sent in a background thread.
+            _send_email_async(msg)
 
         conn.commit()
+
+        # Invalidate caches so the next GET reflects the new data.
+        _cache_invalidate("metrics")
+        _cache_invalidate("alerts")
+
         return {"status": "ok"}
 
     except Exception as e:
@@ -82,27 +139,33 @@ def receive_metrics(data: dict):
         return {"error": str(e)}
 
     finally:
-        if conn:
-            conn.close()
+        release_connection(conn)
 
 
 # 🟢 GET METRICS (LATEST ONLY)
 @app.get("/metrics")
 def get_metrics():
-    conn = create_connection()
-    cursor = conn.cursor()
+    cached = _cache_get("metrics")
+    if cached is not None:
+        return cached
 
-    cursor.execute("""
-        SELECT id, cpu, memory, disk, timestamp
-        FROM metrics
-        ORDER BY id DESC
-        LIMIT 10
-    """)
+    conn = None
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
 
-    rows = cursor.fetchall()
-    conn.close()
+        cursor.execute("""
+            SELECT id, cpu, memory, disk, timestamp
+            FROM metrics
+            ORDER BY id DESC
+            LIMIT 10
+        """)
 
-    return [
+        rows = cursor.fetchall()
+    finally:
+        release_connection(conn)
+
+    result = [
         {
             "id": r[0],
             "cpu": float(r[1]),
@@ -113,24 +176,34 @@ def get_metrics():
         for r in rows
     ]
 
+    _cache_set("metrics", result)
+    return result
+
 
 # 🟡 GET ALERTS
 @app.get("/alerts")
 def get_alerts():
-    conn = create_connection()
-    cursor = conn.cursor()
+    cached = _cache_get("alerts")
+    if cached is not None:
+        return cached
 
-    cursor.execute("""
-        SELECT id, message, timestamp
-        FROM alerts
-        ORDER BY id DESC
-        LIMIT 5
-    """)
+    conn = None
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
 
-    rows = cursor.fetchall()
-    conn.close()
+        cursor.execute("""
+            SELECT id, message, timestamp
+            FROM alerts
+            ORDER BY id DESC
+            LIMIT 5
+        """)
 
-    return [
+        rows = cursor.fetchall()
+    finally:
+        release_connection(conn)
+
+    result = [
         {
             "id": r[0],
             "message": r[1],
@@ -138,3 +211,6 @@ def get_alerts():
         }
         for r in rows
     ]
+
+    _cache_set("alerts", result)
+    return result
