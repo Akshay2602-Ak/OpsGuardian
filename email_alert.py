@@ -1,24 +1,45 @@
-import smtplib
 import os
+import requests
 
-EMAIL = os.getenv("bro998510@gmail.com")
-PASSWORD = os.getenv("zvfwzuusxqqdqmnu")
+BREVO_API_KEY = os.getenv("BREVO_API_KEY")
+EMAIL = os.getenv("EMAIL")
 
 def send_email_alert(message):
     try:
-        server = smtplib.SMTP("smtp.gmail.com", 587)
-        server.starttls()
+        if not BREVO_API_KEY or not EMAIL:
+            print("Email API credentials missing")
+            return
 
-        server.login(EMAIL, PASSWORD)
+        url = "https://api.brevo.com/v3/smtp/email"
 
-        subject = "🚨 OpsGuardian Alert"
-        msg = f"Subject: {subject}\n\n{message}"
+        payload = {
+            "sender": {
+                "name": "OpsGuardian",
+                "email": EMAIL
+            },
+            "to": [
+                {
+                    "email": EMAIL,
+                    "name": "OpsGuardian User"
+                }
+            ],
+            "subject": "OpsGuardian Alert",
+            "htmlContent": f"""
+                <h2>OpsGuardian Alert</h2>
+                <p>{message}</p>
+            """
+        }
 
-        server.sendmail(EMAIL, EMAIL, msg)
+        headers = {
+            "accept": "application/json",
+            "api-key": BREVO_API_KEY,
+            "content-type": "application/json"
+        }
 
-        server.quit()
+        response = requests.post(url, json=payload, headers=headers, timeout=10)
 
-        print("✅ Email sent:", message)
+        print("Email API status:", response.status_code)
+        print("Email API response:", response.text)
 
     except Exception as e:
-        print("❌ Email error:", e)
+        print("Email failed:", e)
