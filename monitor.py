@@ -2,7 +2,7 @@ import requests
 import psutil
 import time
 
-URL = "https://YOUR-RAILWAY-URL/metrics"
+URL = "https://opsguardian.up.railway.app//metrics"
 
 def get_metrics():
     return {
