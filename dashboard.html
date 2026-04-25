@@ -234,10 +234,21 @@ async function fetchAlerts() {
         let list = document.getElementById("alertsList");
         list.innerHTML = "";
 
+        if (!Array.isArray(data)) {
+            list.innerHTML = "<li class='alert'>No alerts available</li>";
+            console.log("Alert API returned:", data);
+            return;
+        }
+
+        if (data.length === 0) {
+            list.innerHTML = "<li class='alert'>No recent alerts</li>";
+            return;
+        }
+
         data.forEach(a => {
             let li = document.createElement("li");
             li.className = "alert";
-            li.innerHTML = `<b>${a.message}</b><br><small>${a.time}</small>`;
+            li.innerHTML = `<b>${a.message}</b><br><small>${a.time || ""}</small>`;
             list.appendChild(li);
         });
 
