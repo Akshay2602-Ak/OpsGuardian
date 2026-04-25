@@ -1,45 +1,29 @@
 import os
 import requests
 
-BREVO_API_KEY = os.getenv("BREVO_API_KEY")
+API_KEY = os.getenv("RESEND_API_KEY")
 EMAIL = os.getenv("EMAIL")
 
 def send_email_alert(message):
     try:
-        if not BREVO_API_KEY or not EMAIL:
-            print("Email API credentials missing")
-            return
-
-        url = "https://api.brevo.com/v3/smtp/email"
-
-        payload = {
-            "sender": {
-                "name": "OpsGuardian",
-                "email": EMAIL
-            },
-            "to": [
-                {
-                    "email": EMAIL,
-                    "name": "OpsGuardian User"
-                }
-            ],
-            "subject": "OpsGuardian Alert",
-            "htmlContent": f"""
-                <h2>OpsGuardian Alert</h2>
-                <p>{message}</p>
-            """
-        }
+        url = "https://api.resend.com/emails"
 
         headers = {
-            "accept": "application/json",
-            "api-key": BREVO_API_KEY,
-            "content-type": "application/json"
+            "Authorization": f"Bearer {API_KEY}",
+            "Content-Type": "application/json"
         }
 
-        response = requests.post(url, json=payload, headers=headers, timeout=10)
+        payload = {
+            "from": "OpsGuardian <onboarding@resend.dev>",
+            "to": [EMAIL],
+            "subject": "🚨 OpsGuardian Alert",
+            "html": f"<h3>{message}</h3>"
+        }
 
-        print("Email API status:", response.status_code)
-        print("Email API response:", response.text)
+        res = requests.post(url, json=payload, headers=headers)
+
+        print("Email status:", res.status_code)
+        print("Response:", res.text)
 
     except Exception as e:
         print("Email failed:", e)
