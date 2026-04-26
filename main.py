@@ -57,23 +57,32 @@ def receive_metrics(data: dict, background_tasks: BackgroundTasks):
 
 
 @app.get("/metrics")
-def get_metrics():
+def get_metrics(device: str = None):
     conn = create_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
-        SELECT device_name, cpu, memory, disk, timestamp
-        FROM metrics
-        ORDER BY id DESC
-        LIMIT 10
-    """)
+    if device and device != "All":
+        cursor.execute("""
+            SELECT device_name, cpu, memory, disk, timestamp
+            FROM metrics
+            WHERE device_name = %s
+            ORDER BY id DESC
+            LIMIT 10
+        """, (device,))
+    else:
+        cursor.execute("""
+            SELECT device_name, cpu, memory, disk, timestamp
+            FROM metrics
+            ORDER BY id DESC
+            LIMIT 10
+        """)
 
     rows = cursor.fetchall()
     conn.close()
 
     return [
         {
-            "device_name": r[0] or "Unknown Device",
+            "device_name": r[0],
             "cpu": float(r[1]),
             "memory": float(r[2]),
             "disk": float(r[3]),
@@ -123,6 +132,21 @@ def get_alerts():
         })
 
     return alerts
+@app.get("/devices")
+def get_devices():
+    conn = create_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT DISTINCT device_name FROM metrics
+    """)
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    devices = [r[0] for r in rows if r[0]]
+
+    return devices
 # @app.get("/test-email")
 # def test_email(background_tasks: BackgroundTasks):
 #     background_tasks.add_task(send_email_alert, "Test Email from OpsGuardian")
