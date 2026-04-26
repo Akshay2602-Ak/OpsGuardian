@@ -1,40 +1,59 @@
-# 🚀 OpsGuardian – Real-Time Cloud Monitoring System
+# 🚀 OpsGuardian
 
-OpsGuardian is a real-time system monitoring dashboard that tracks CPU, Memory, and Disk usage from multiple devices and displays them in a modern UI dashboard with alerts and email notifications.
-
----
+OpsGuardian is a real-time cloud-based system monitoring dashboard that tracks CPU, Memory, and Disk usage from a device and visualizes the data using a modern dashboard.
 
 ## 🔥 Features
 
-- 📊 Real-time CPU, Memory, Disk monitoring
-- 📈 Live charts with smooth UI (Chart.js)
-- 🚨 Alert system (CPU > 50%, Memory > 70%, Disk > 80%)
-- 📧 Email notifications for alerts
-- 🌐 Cloud deployed backend (Railway)
-- 🖥️ Multi-device monitoring support
-- 🎨 Modern glassmorphism dashboard UI
+- Real-time CPU, Memory, and Disk monitoring
+- Cloud backend deployed on Railway
+- PostgreSQL database storage
+- Modern responsive dashboard UI
+- Device name support
+- Device filter dropdown
+- Recent alert section
+- Email alert support
+
+## 🛠️ Tech Stack
+
+- Python
+- FastAPI
+- PostgreSQL
+- Railway
+- HTML, CSS, JavaScript
+- Chart.js
+- psutil
+- Resend Email API
+
+## 📂 Project Files
+
+```text
+main.py
+database.py
+monitor.py
+email_alert.py
+dashboard.html
+requirements.txt
+README.md
+
+## 🚀 How It Works
+
+monitor.py → sends system data → FastAPI backend → PostgreSQL → dashboard.html
 
 ---
 
-## 🛠 Tech Stack
+## ⚙️ Run Monitoring Agent (Local)
 
-- Backend: FastAPI (Python)
-- Database: PostgreSQL (Railway)
-- Frontend: HTML, CSS, JavaScript, Chart.js
-- Deployment: Railway
-- Monitoring Agent: Python (psutil)
-
----
-
-## 📸 Screenshots
-
-> Add your dashboard screenshot here (upload in repo)
-
----
-
-## ⚙️ Setup Instructions
-
-### 1. Clone repo
 ```bash
-git clone https://github.com/YOUR_USERNAME/OpsGuardian.git
-cd OpsGuardian
+python monitor.py
+
+🌐 Live API
+
+https://opsguardian.up.railway.app
+
+📊 API Endpoints
+GET /
+POST /metrics
+GET /metrics
+GET /alerts
+GET /devices
+GET /test-email
