@@ -470,7 +470,7 @@
                 let dropdown = document.getElementById("deviceFilter");
                 let current = dropdown.value;
 
-                dropdown.innerHTML = <option value="All">All Devices</option>;
+                dropdown.innerHTML = `<option value="All">All Devices</option>`;
 
                 if (Array.isArray(devices)) {
                     devices.forEach(device => {
