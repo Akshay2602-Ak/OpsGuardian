@@ -13,11 +13,17 @@ def create_table():
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS metrics (
         id SERIAL PRIMARY KEY,
+        device_name TEXT,
         cpu REAL,
         memory REAL,
         disk REAL,
         timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
+    """)
+
+    cursor.execute("""
+    ALTER TABLE metrics 
+    ADD COLUMN IF NOT EXISTS device_name TEXT
     """)
 
     conn.commit()

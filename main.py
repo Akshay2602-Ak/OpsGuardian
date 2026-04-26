@@ -23,6 +23,7 @@ def home():
 
 @app.post("/metrics")
 def receive_metrics(data: dict, background_tasks: BackgroundTasks):
+    device_name = data.get("device_name", "Unknown Device")
     cpu = float(data.get("cpu", 0))
     memory = float(data.get("memory", 0))
     disk = float(data.get("disk", 0))
@@ -31,20 +32,20 @@ def receive_metrics(data: dict, background_tasks: BackgroundTasks):
     cursor = conn.cursor()
 
     cursor.execute(
-        "INSERT INTO metrics (cpu, memory, disk) VALUES (%s, %s, %s)",
-        (cpu, memory, disk)
+        "INSERT INTO metrics (device_name, cpu, memory, disk) VALUES (%s, %s, %s, %s)",
+        (device_name, cpu, memory, disk)
     )
 
     alerts = []
 
     if cpu > 50:
-        alerts.append(f"High CPU Usage: {cpu}%")
+        alerts.append(f"{device_name} - High CPU Usage: {cpu}%")
 
     if memory > 70:
-        alerts.append(f"High Memory Usage: {memory}%")
+        alerts.append(f"{device_name} - High Memory Usage: {memory}%")
 
     if disk > 80:
-        alerts.append(f"Disk Full: {disk}%")
+        alerts.append(f"{device_name} - Disk Full: {disk}%")
 
     conn.commit()
     conn.close()
@@ -52,7 +53,7 @@ def receive_metrics(data: dict, background_tasks: BackgroundTasks):
     for alert in alerts:
         background_tasks.add_task(send_email_alert, alert)
 
-    return {"status": "stored", "alerts": alerts}
+    return {"status": "stored", "device": device_name, "alerts": alerts}
 
 
 @app.get("/metrics")
@@ -61,7 +62,7 @@ def get_metrics():
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT cpu, memory, disk, timestamp
+        SELECT device_name, cpu, memory, disk, timestamp
         FROM metrics
         ORDER BY id DESC
         LIMIT 10
@@ -72,14 +73,14 @@ def get_metrics():
 
     return [
         {
-            "cpu": float(r[0]),
-            "memory": float(r[1]),
-            "disk": float(r[2]),
-            "time": str(r[3])
+            "device_name": r[0] or "Unknown Device",
+            "cpu": float(r[1]),
+            "memory": float(r[2]),
+            "disk": float(r[3]),
+            "time": str(r[4])
         }
         for r in rows
     ]
-
 
 @app.get("/alerts")
 def get_alerts():
@@ -87,7 +88,7 @@ def get_alerts():
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT cpu, memory, disk, timestamp
+        SELECT device_name, cpu, memory, disk, timestamp
         FROM metrics
         WHERE cpu > 50 OR memory > 70 OR disk > 80
         ORDER BY id DESC
@@ -100,27 +101,29 @@ def get_alerts():
     alerts = []
 
     for r in rows:
-        cpu = float(r[0])
-        memory = float(r[1])
-        disk = float(r[2])
-        time = r[3]
+        device_name = r[0] or "Unknown Device"
+        cpu = float(r[1])
+        memory = float(r[2])
+        disk = float(r[3])
+        time = r[4]
 
         if cpu > 50:
-            message = f"High CPU Usage: {cpu}%"
+            message = f"{device_name} - High CPU Usage: {cpu}%"
         elif memory > 70:
-            message = f"High Memory Usage: {memory}%"
+            message = f"{device_name} - High Memory Usage: {memory}%"
         elif disk > 80:
-            message = f"Disk Full: {disk}%"
+            message = f"{device_name} - Disk Full: {disk}%"
         else:
-            message = "System Alert"
+            message = f"{device_name} - System Alert"
 
         alerts.append({
+            "device_name": device_name,
             "message": message,
             "time": str(time)
         })
 
     return alerts
-@app.get("/test-email")
-def test_email(background_tasks: BackgroundTasks):
-    background_tasks.add_task(send_email_alert, "Test Email from OpsGuardian")
-    return {"status": "test email triggered"}
+# @app.get("/test-email")
+# def test_email(background_tasks: BackgroundTasks):
+#     background_tasks.add_task(send_email_alert, "Test Email from OpsGuardian")
+#     return {"status": "test email triggered"}

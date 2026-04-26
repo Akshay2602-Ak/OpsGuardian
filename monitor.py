@@ -1,11 +1,14 @@
 import requests
 import psutil
 import time
+import socket
 
 URL = "https://opsguardian.up.railway.app/metrics"
+DEVICE_NAME = socket.gethostname()
 
 def get_metrics():
     return {
+        "device_name": DEVICE_NAME,
         "cpu": psutil.cpu_percent(),
         "memory": psutil.virtual_memory().percent,
         "disk": psutil.disk_usage('/').percent
@@ -14,6 +17,7 @@ def get_metrics():
 while True:
     data = get_metrics()
 
+    print("Device:", data["device_name"])
     print("CPU:", data["cpu"])
     print("Memory:", data["memory"])
     print("Disk:", data["disk"])
@@ -25,5 +29,4 @@ while True:
         print("Network issue:", e)
 
     print("----------------------")
-
     time.sleep(10)
